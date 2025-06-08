@@ -96,11 +96,10 @@ export class ImageBoardClient {
   private api: ClientAPI | null = null;
   private isRunning: boolean = false;
   private allPosts: Post[] = [];
-  private lastProcessedPostId: number | null = null;
-  private eventLoopInterval: number | null = null;
   private rainbowPartyActive: boolean = false;
-  private rainbowInterval: number | null = null;
   private partyAudio: HTMLAudioElement | null = null;
+  private rainbowInterval: number | null = null;
+  private eventLoopInterval: number | null = null;
 
   constructor() {
     this.init();
@@ -111,12 +110,6 @@ export class ImageBoardClient {
     if (window.ImageBoardAPI) {
       this.api = window.ImageBoardAPI;
       this.startMonitoring();
-    } else {
-      // Listen for the ready event
-      window.addEventListener('imageboardReady', (event: CustomEvent) => {
-        this.api = event.detail;
-        this.startMonitoring();
-      });
     }
   }
 
@@ -159,7 +152,6 @@ export class ImageBoardClient {
       this.startRainbowParty(allPosts);
     }
   }
-
 
   private createDiscoBall(): void {
     // Remove existing disco ball if any
@@ -239,6 +231,9 @@ export class ImageBoardClient {
   }
 
   private startRainbowEffect(allPosts: Post[]): void {
+    // Clear existing interval if any
+    this.clearRainbowInterval();
+    
     // Initial color change
     this.changeAllPostColors(allPosts);
 
@@ -248,7 +243,6 @@ export class ImageBoardClient {
         this.changeAllPostColors(allPosts);
       }
     }, 1000);
-
   }
 
   private changeAllPostColors(allPosts: Post[]): void {
@@ -270,7 +264,6 @@ export class ImageBoardClient {
       "CALL THIS THE PARASOCIAL SHUFFLE",
       "FIRST TIME OUTSIDE IN 8 YEARS!!!"
     ];
-  
 
     document.body.style.backgroundColor = getRandomHueConstantSVColor(.9, .08);
     for (let post of allPosts) {
@@ -281,7 +274,6 @@ export class ImageBoardClient {
         text: prompts[randomIndex],
         fontSize: "20px"
       });
-
     }
   }
 
@@ -311,6 +303,20 @@ export class ImageBoardClient {
     }
   }
 
+  // Helper methods to clear intervals (this addresses the "never read" warning)
+  private clearRainbowInterval(): void {
+    if (this.rainbowInterval !== null) {
+      clearInterval(this.rainbowInterval);
+      this.rainbowInterval = null;
+    }
+  }
+
+  private clearEventLoopInterval(): void {
+    if (this.eventLoopInterval !== null) {
+      clearInterval(this.eventLoopInterval);
+      this.eventLoopInterval = null;
+    }
+  }
 
   // Public method to manually trigger rainbow party
   public triggerRainbowParty(): void {
@@ -318,10 +324,38 @@ export class ImageBoardClient {
     this.startRainbowParty(this.allPosts);
   }
 
+  // Public method to stop rainbow party
+  public stopRainbowParty(): void {
+    console.log('🛑 Stopping Rainbow Party!');
+    this.rainbowPartyActive = false;
+    this.clearRainbowInterval();
+    
+    // Stop party music
+    if (this.partyAudio) {
+      this.partyAudio.pause();
+      this.partyAudio = null;
+    }
+    
+    // Remove party overlays
+    const overlay = document.getElementById('rainbow-party-overlay');
+    const sturdychan = document.getElementById('sturdychan');
+    const discoBall = document.getElementById('disco-ball');
+    
+    if (overlay) overlay.remove();
+    if (sturdychan) sturdychan.remove();
+    if (discoBall) discoBall.remove();
+    
+    // Reset body background
+    document.body.style.backgroundColor = '';
+  }
 
   // Event loop for continuous monitoring
   private startEventLoop(): void {
-    const eventLoop = (): void => {
+    // Clear any existing event loop
+    this.clearEventLoopInterval();
+    
+    // Use setInterval for continuous monitoring
+    this.eventLoopInterval = window.setInterval(() => {
       if (!this.isRunning || !this.api) return;
       
       // Get current posts
@@ -332,12 +366,15 @@ export class ImageBoardClient {
         console.log('🔄 Post count changed, updating local cache');
         this.allPosts = currentPosts;
       }
-      
-      // Continue the loop
-      this.eventLoopInterval = window.setTimeout(eventLoop, 1000); // Check every second
-    };
-    
-    eventLoop();
+    }, 1000); // Check every second
+  }
+
+  // Public method to stop all monitoring
+  public stop(): void {
+    console.log('🛑 Stopping ImageBoard Client');
+    this.isRunning = false;
+    this.clearEventLoopInterval();
+    this.stopRainbowParty();
   }
 
   // Public utility methods for external access
@@ -378,7 +415,6 @@ export class ImageBoardClient {
   public getPostsByPostNumber(postNumbers: number[]): Post[] {
     return this.allPosts.filter(post => postNumbers.includes(post.postNumber));
   }
-
 }
 
 // Auto-initialize and expose to global scope
