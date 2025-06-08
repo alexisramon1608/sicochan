@@ -3,6 +3,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import './index.css';
 import imageBoardClient from './client-script';
 
+console.log(imageBoardClient)
+
 interface Post {
   id: number;
   timestamp: string;
