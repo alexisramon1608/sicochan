@@ -154,6 +154,13 @@ const ImageBoard: React.FC = () => {
         height: 440
       },
       text: 'something something textposter something something visitors'
+    },
+    {
+      id: 7,
+      timestamp: '24 Jun 2024 (Mon) 20:53:00',
+      postNumber: 1697460,
+
+      text: 'reply to this post with "sturdy" if youre cool'
     }
   ]);
 
