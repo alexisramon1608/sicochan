@@ -5,28 +5,8 @@ interface DinoGameProps {
   containerId?: string;
 }
 
-interface Player {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  dy: number;
-  jumpPower: number;
-  grounded: boolean;
-  color: string;
-}
-
-interface Obstacle {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-interface Sprites {
-  obstacle: HTMLImageElement | null;
-  background: HTMLImageElement | null;
-}
+// Note: Interfaces are for TypeScript checking and don't exist in the final JS,
+// so they don't need to be part of the stringified game logic.
 
 class DinoGameEngine {
   canvas: HTMLCanvasElement;
@@ -34,17 +14,14 @@ class DinoGameEngine {
   scoreElement: HTMLElement | null = null;
   gameOverElement: HTMLElement| null = null;
   finalScoreElement: HTMLElement | null = null;
-
   isRunning: boolean = false;
   score: number = 0;
   gameSpeed: number = 3;
   gravity: number = 0.6;
-
-  player: Player;
-  obstacles: Obstacle[] = [];
+  player: any; // Using 'any' as the interface won't exist in the iframe
+  obstacles: any[] = [];
   obstacleTimer: number = 0;
   obstacleInterval: number = 120;
-
   bgX: number = 0;
   playerSprites: HTMLImageElement[] = [];
   currentPlayerSprite: number = 0;
@@ -52,16 +29,11 @@ class DinoGameEngine {
   specialSprite: HTMLImageElement | null = null;
   specialSpriteLoaded: boolean = false;
   animationTime: number = 0;
-
-  sprites: Sprites = {
-    obstacle: null,
-    background: null
-  };
+  sprites: any = { obstacle: null, background: null };
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
-
     this.player = {
       x: 50,
       y: canvas.height - 120,
@@ -72,7 +44,6 @@ class DinoGameEngine {
       grounded: true,
       color: '#FF6B6B'
     };
-
     this.loadSprites();
     this.setupControls();
   }
@@ -89,7 +60,6 @@ class DinoGameEngine {
       'https://i.imgur.com/YrhlSea.png',
       'https://i.imgur.com/6Qh5zgf.png'
     ];
-
     playerSpriteUrls.forEach((url, index) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
@@ -103,7 +73,6 @@ class DinoGameEngine {
         this.playerSpritesLoaded++;
       };
     });
-
     const specialImg = new Image();
     specialImg.crossOrigin = 'anonymous';
     specialImg.src = 'https://i.imgur.com/JZa569N.png';
@@ -111,12 +80,10 @@ class DinoGameEngine {
       this.specialSprite = specialImg;
       this.specialSpriteLoaded = true;
     };
-
     const obstacleImg = new Image();
     obstacleImg.crossOrigin = 'anonymous';
     obstacleImg.src = 'https://i.imgur.com/Hf8RmIT.png';
     obstacleImg.onload = () => this.sprites.obstacle = obstacleImg;
-
     const bgImg = new Image();
     bgImg.crossOrigin = 'anonymous';
     bgImg.onload = () => this.sprites.background = bgImg;
@@ -127,21 +94,17 @@ class DinoGameEngine {
       e.preventDefault();
       this.jump();
     };
-
     document.addEventListener('keydown', (e) => {
       if (e.code === 'Space' || e.code === 'ArrowUp') {
         jumpHandler(e);
       }
     });
-
-    // We listen on the document for touch/click to ensure it works inside the iframe overlay
     document.addEventListener('click', jumpHandler);
     document.addEventListener('touchstart', jumpHandler);
   }
 
   jump() {
     if (!this.isRunning) return;
-
     if (this.player.grounded) {
       this.player.dy = -this.player.jumpPower;
       this.player.grounded = false;
@@ -151,21 +114,17 @@ class DinoGameEngine {
 
   update() {
     if (!this.isRunning) return;
-
     this.animationTime += 0.02;
     this.score += 1;
     this.gameSpeed = 3 + Math.floor(this.score / 200) * 0.8;
-
     this.player.dy += this.gravity;
     this.player.y += this.player.dy;
-
     const groundY = this.canvas.height - 100;
     if (this.player.y >= groundY) {
       this.player.y = groundY;
       this.player.dy = 0;
       this.player.grounded = true;
     }
-
     this.obstacleTimer++;
     if (this.obstacleTimer >= this.obstacleInterval) {
       this.obstacles.push({
@@ -175,20 +134,16 @@ class DinoGameEngine {
         height: 125
       });
       this.obstacleTimer = 0;
-
       const baseInterval = Math.max(40, 120 - Math.floor(this.score / 300) * 8);
       const randomVariation = Math.random() * 80 - 40;
       this.obstacleInterval = Math.max(25, baseInterval + randomVariation);
     }
-
     for (let i = this.obstacles.length - 1; i >= 0; i--) {
       this.obstacles[i].x -= this.gameSpeed;
-
       if (this.obstacles[i].x + this.obstacles[i].width < 0) {
         this.obstacles.splice(i, 1);
       }
     }
-
     this.checkCollisions();
     this.bgX -= this.gameSpeed * 0.5;
     if (this.bgX <= -100) this.bgX = 0;
@@ -208,7 +163,6 @@ class DinoGameEngine {
 
   render() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
     if (this.score >= 1000) {
       const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
       for (let i = 0; i <= 1; i += 0.2) {
@@ -230,14 +184,11 @@ class DinoGameEngine {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
       }
     }
-
     this.ctx.fillStyle = '#8B4513';
     this.ctx.fillRect(0, this.canvas.height - 20, this.canvas.width, 20);
-
     let currentSprite = null;
     let originalWidth = 350;
     let originalHeight = 575;
-
     if (this.score >= 1000 && this.specialSprite) {
       currentSprite = this.specialSprite;
       originalWidth = 500;
@@ -245,18 +196,14 @@ class DinoGameEngine {
     } else if (this.playerSprites[this.currentPlayerSprite] && this.playerSpritesLoaded > 0) {
       currentSprite = this.playerSprites[this.currentPlayerSprite];
     }
-
     if (currentSprite) {
       const scaleX = this.player.width / originalWidth;
       const scaleY = this.player.height / originalHeight;
       const scale = Math.min(scaleX, scaleY);
-
       const scaledWidth = originalWidth * scale;
       const scaledHeight = originalHeight * scale;
-
       const offsetX = (this.player.width - scaledWidth) / 2;
       const offsetY = (this.player.height - scaledHeight) / 2;
-
       this.ctx.drawImage(
         currentSprite,
         this.player.x + offsetX,
@@ -268,19 +215,15 @@ class DinoGameEngine {
       this.ctx.fillStyle = this.player.color;
       this.ctx.fillRect(this.player.x, this.player.y, this.player.width, this.player.height);
     }
-
     for (let obstacle of this.obstacles) {
       if (this.sprites.obstacle) {
         const scaleX = obstacle.width / 250;
         const scaleY = obstacle.height / 380;
         const scale = Math.min(scaleX, scaleY);
-
         const scaledWidth = 250 * scale;
         const scaledHeight = 380 * scale;
-
         const offsetX = (obstacle.width - scaledWidth) / 2;
         const offsetY = (obstacle.height - scaledHeight) / 2;
-
         this.ctx.drawImage(
           this.sprites.obstacle,
           obstacle.x + offsetX,
@@ -293,7 +236,6 @@ class DinoGameEngine {
         this.ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
       }
     }
-
     if (this.scoreElement) {
       this.scoreElement.textContent = `Score: ${this.score}`;
     }
@@ -302,7 +244,6 @@ class DinoGameEngine {
   gameLoop() {
     this.update();
     this.render();
-
     if (this.isRunning) {
       requestAnimationFrame(() => this.gameLoop());
     }
@@ -317,12 +258,10 @@ class DinoGameEngine {
     this.obstacleInterval = 120;
     this.currentPlayerSprite = 0;
     this.animationTime = 0;
-
     this.player.x = 50;
     this.player.y = this.canvas.height - 120;
     this.player.dy = 0;
     this.player.grounded = true;
-
     if (this.gameOverElement) {
       this.gameOverElement.style.display = 'none';
     }
@@ -350,12 +289,17 @@ const DinoGame: React.FC<DinoGameProps> = ({ containerId = 'dino-game-container'
 
   useEffect(() => {
     if (canvasRef.current && scoreRef.current && gameOverRef.current && finalScoreRef.current) {
-      gameEngineRef.current = new DinoGameEngine(canvasRef.current);
-      gameEngineRef.current.setElements(scoreRef.current, gameOverRef.current, finalScoreRef.current);
-
-      setTimeout(() => {
-        gameEngineRef.current?.start();
-      }, 500);
+      // The React component doesn't need to instantiate the engine directly anymore
+      // if the primary use case is the overlay. But we can leave it for flexibility.
+      try {
+        gameEngineRef.current = new DinoGameEngine(canvasRef.current);
+        gameEngineRef.current.setElements(scoreRef.current, gameOverRef.current, finalScoreRef.current);
+        setTimeout(() => {
+          gameEngineRef.current?.start();
+        }, 500);
+      } catch(e) {
+        console.error("Error initializing DinoGameEngine in React component:", e);
+      }
     }
   }, []);
 
@@ -446,78 +390,47 @@ export default DinoGame;
 
 /**
  * Creates and injects the Dino Game as a full-screen overlay.
+ * This version defines the game engine class within a string to avoid minification issues on deployment.
  */
 export const createDinoGame = (): void => {
-  // Prevent creating multiple game instances
   if (document.getElementById('dino-game-overlay-container')) {
     console.warn('Dino game is already active.');
     return;
   }
 
-  // --- Main Overlay Container ---
   const overlay = document.createElement('div');
   overlay.id = 'dino-game-overlay-container';
   overlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.75);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: rgba(0, 0, 0, 0.75); display: flex;
+    justify-content: center; align-items: center; z-index: 9999;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   `;
 
-  // --- Game Wrapper (for positioning iframe and close button) ---
   const gameWrapper = document.createElement('div');
   gameWrapper.style.cssText = `
-    position: relative;
-    width: 820px;
-    max-width: 95%;
-    height: 250px;
+    position: relative; width: 820px; max-width: 95%; height: 250px;
   `;
 
-  // --- Close Button ---
   const closeButton = document.createElement('button');
-  closeButton.innerText = '×'; // A nicer 'X'
+  closeButton.innerText = '×';
   closeButton.style.cssText = `
-    position: absolute;
-    top: -15px;
-    right: -15px;
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    border: 2px solid white;
-    background-color: #222;
-    color: white;
-    font-size: 24px;
-    font-weight: bold;
-    cursor: pointer;
-    z-index: 10000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    line-height: 1;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    position: absolute; top: -15px; right: -15px; width: 35px; height: 35px;
+    border-radius: 50%; border: 2px solid white; background-color: #222;
+    color: white; font-size: 24px; font-weight: bold; cursor: pointer;
+    z-index: 10000; display: flex; justify-content: center; align-items: center;
+    line-height: 1; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     transition: transform 0.2s ease, background-color 0.2s ease;
   `;
   closeButton.onmouseover = () => { closeButton.style.transform = 'scale(1.1)'; closeButton.style.backgroundColor = '#e63946'; };
   closeButton.onmouseout = () => { closeButton.style.transform = 'scale(1)'; closeButton.style.backgroundColor = '#222'; };
 
-  // --- Iframe for the game ---
   const iframe = document.createElement('iframe');
   iframe.style.cssText = `
-    width: 100%;
-    height: 100%;
-    border: none;
-    border-radius: 10px;
+    width: 100%; height: 100%; border: none; border-radius: 10px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
   `;
 
-  // --- HTML content for the iframe ---
   const gameHTML = `
 <!DOCTYPE html>
 <html lang="en">
@@ -526,67 +439,13 @@ export const createDinoGame = (): void => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dino Game</title>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            overflow: hidden; /* Prevent scrolling inside iframe */
-            background: transparent;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-        }
-        #gameContainer {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        #gameCanvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(to bottom, #87CEEB, #98FB98);
-        }
-        #score {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            text-shadow: 1px 1px 2px white;
-            z-index: 10;
-        }
-        #gameOver {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            display: none;
-            z-index: 20;
-        }
-        button {
-            background: #4CAF50;
-            border: none;
-            color: white;
-            padding: 15px 32px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 5px;
-            transition: background-color 0.2s ease;
-        }
-        button:hover {
-            background: #45a049;
-        }
+        body, html { margin: 0; padding: 0; overflow: hidden; background: transparent; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+        #gameContainer { width: 100%; height: 100%; position: relative; display: flex; justify-content: center; align-items: center; }
+        #gameCanvas { display: block; width: 100%; height: 100%; background: linear-gradient(to bottom, #87CEEB, #98FB98); }
+        #score { position: absolute; top: 20px; right: 20px; font-size: 24px; font-weight: bold; color: #333; text-shadow: 1px 1px 2px white; z-index: 10; }
+        #gameOver { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 10px; display: none; z-index: 20; }
+        button { background: #4CAF50; border: none; color: white; padding: 15px 32px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; border-radius: 5px; transition: background-color 0.2s ease; }
+        button:hover { background: #45a049; }
     </style>
 </head>
 <body>
@@ -600,32 +459,134 @@ export const createDinoGame = (): void => {
         </div>
     </div>
     <script>
-        // Inject the game engine class into the iframe's window
-        window.DinoGameEngine = ${DinoGameEngine.toString()};
+        // --- FIX: Define the entire class inside the script to prevent minification errors ---
+        class DinoGameEngine {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.player = { x: 50, y: canvas.height - 120, width: 80, height: 80, dy: 0, jumpPower: 20, grounded: true, color: '#FF6B6B' };
+                this.scoreElement = null;
+                this.gameOverElement = null;
+                this.finalScoreElement = null;
+                this.isRunning = false;
+                this.score = 0;
+                this.gameSpeed = 3;
+                this.gravity = 0.6;
+                this.obstacles = [];
+                this.obstacleTimer = 0;
+                this.obstacleInterval = 120;
+                this.bgX = 0;
+                this.playerSprites = [];
+                this.currentPlayerSprite = 0;
+                this.playerSpritesLoaded = 0;
+                this.specialSprite = null;
+                this.specialSpriteLoaded = false;
+                this.animationTime = 0;
+                this.sprites = { obstacle: null, background: null };
+                this.loadSprites();
+                this.setupControls();
+            }
+            setElements(scoreEl, gameOverEl, finalScoreEl) { this.scoreElement = scoreEl; this.gameOverElement = gameOverEl; this.finalScoreElement = finalScoreEl; }
+            loadSprites() {
+                const playerSpriteUrls = ['https://i.imgur.com/ma5qyfz.png', 'https://i.imgur.com/YrhlSea.png', 'https://i.imgur.com/6Qh5zgf.png'];
+                playerSpriteUrls.forEach((url, index) => {
+                    const img = new Image(); img.crossOrigin = 'anonymous'; img.src = url;
+                    img.onload = () => { this.playerSprites[index] = img; this.playerSpritesLoaded++; };
+                    img.onerror = () => { console.log(\`Failed to load player sprite \${index + 1}\`); this.playerSpritesLoaded++; };
+                });
+                const specialImg = new Image(); specialImg.crossOrigin = 'anonymous'; specialImg.src = 'https://i.imgur.com/JZa569N.png';
+                specialImg.onload = () => { this.specialSprite = specialImg; this.specialSpriteLoaded = true; };
+                const obstacleImg = new Image(); obstacleImg.crossOrigin = 'anonymous'; obstacleImg.src = 'https://i.imgur.com/Hf8RmIT.png';
+                obstacleImg.onload = () => this.sprites.obstacle = obstacleImg;
+                const bgImg = new Image(); bgImg.crossOrigin = 'anonymous'; bgImg.onload = () => this.sprites.background = bgImg;
+            }
+            setupControls() {
+                const jumpHandler = (e) => { e.preventDefault(); this.jump(); };
+                document.addEventListener('keydown', (e) => { if (e.code === 'Space' || e.code === 'ArrowUp') jumpHandler(e); });
+                document.addEventListener('click', jumpHandler);
+                document.addEventListener('touchstart', jumpHandler);
+            }
+            jump() { if (this.isRunning && this.player.grounded) { this.player.dy = -this.player.jumpPower; this.player.grounded = false; this.currentPlayerSprite = (this.currentPlayerSprite + 1) % 3; } }
+            update() {
+                if (!this.isRunning) return;
+                this.animationTime += 0.02; this.score++; this.gameSpeed = 3 + Math.floor(this.score / 200) * 0.8;
+                this.player.dy += this.gravity; this.player.y += this.player.dy;
+                const groundY = this.canvas.height - 100;
+                if (this.player.y >= groundY) { this.player.y = groundY; this.player.dy = 0; this.player.grounded = true; }
+                this.obstacleTimer++;
+                if (this.obstacleTimer >= this.obstacleInterval) {
+                    this.obstacles.push({ x: this.canvas.width, y: groundY - 45, width: 75, height: 125 });
+                    this.obstacleTimer = 0;
+                    const baseInterval = Math.max(40, 120 - Math.floor(this.score / 300) * 8);
+                    const randomVariation = Math.random() * 80 - 40;
+                    this.obstacleInterval = Math.max(25, baseInterval + randomVariation);
+                }
+                for (let i = this.obstacles.length - 1; i >= 0; i--) {
+                    this.obstacles[i].x -= this.gameSpeed;
+                    if (this.obstacles[i].x + this.obstacles[i].width < 0) this.obstacles.splice(i, 1);
+                }
+                this.checkCollisions(); this.bgX -= this.gameSpeed * 0.5; if (this.bgX <= -100) this.bgX = 0;
+            }
+            checkCollisions() {
+                for (let obstacle of this.obstacles) {
+                    if (this.player.x < obstacle.x + obstacle.width && this.player.x + this.player.width > obstacle.x && this.player.y < obstacle.y + obstacle.height && this.player.y + this.player.height > obstacle.y) {
+                        this.gameOver(); return;
+                    }
+                }
+            }
+            render() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                if (this.score >= 1000) {
+                    const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
+                    for (let i = 0; i <= 1; i += 0.2) { const hue = (this.animationTime * 50 + i * 360) % 360; gradient.addColorStop(i, \`hsl(\${hue}, 70%, 60%)\`); }
+                    this.ctx.fillStyle = gradient; this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                } else {
+                    if (this.sprites.background) { for (let x = this.bgX; x < this.canvas.width + 100; x += 100) this.ctx.drawImage(this.sprites.background, x, 0, 100, 50); }
+                    else { const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height); gradient.addColorStop(0, '#87CEEB'); gradient.addColorStop(1, '#98FB98'); this.ctx.fillStyle = gradient; this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height); }
+                }
+                this.ctx.fillStyle = '#8B4513'; this.ctx.fillRect(0, this.canvas.height - 20, this.canvas.width, 20);
+                let currentSprite = null, originalWidth = 350, originalHeight = 575;
+                if (this.score >= 1000 && this.specialSprite) { currentSprite = this.specialSprite; originalWidth = 500; originalHeight = 575; }
+                else if (this.playerSprites[this.currentPlayerSprite] && this.playerSpritesLoaded > 0) { currentSprite = this.playerSprites[this.currentPlayerSprite]; }
+                if (currentSprite) {
+                    const scale = Math.min(this.player.width / originalWidth, this.player.height / originalHeight);
+                    const scaledWidth = originalWidth * scale, scaledHeight = originalHeight * scale;
+                    const offsetX = (this.player.width - scaledWidth) / 2, offsetY = (this.player.height - scaledHeight) / 2;
+                    this.ctx.drawImage(currentSprite, this.player.x + offsetX, this.player.y + offsetY, scaledWidth, scaledHeight);
+                } else { this.ctx.fillStyle = this.player.color; this.ctx.fillRect(this.player.x, this.player.y, this.player.width, this.player.height); }
+                for (let obstacle of this.obstacles) {
+                    if (this.sprites.obstacle) {
+                        const scale = Math.min(obstacle.width / 250, obstacle.height / 380);
+                        const scaledWidth = 250 * scale, scaledHeight = 380 * scale;
+                        const offsetX = (obstacle.width - scaledWidth) / 2, offsetY = (obstacle.height - scaledHeight) / 2;
+                        this.ctx.drawImage(this.sprites.obstacle, obstacle.x + offsetX, obstacle.y + offsetY, scaledWidth, scaledHeight);
+                    } else { this.ctx.fillStyle = '#8B4513'; this.ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height); }
+                }
+                if (this.scoreElement) this.scoreElement.textContent = \`Score: \${this.score}\`;
+            }
+            gameLoop() { this.update(); this.render(); if (this.isRunning) requestAnimationFrame(() => this.gameLoop()); }
+            start() {
+                this.isRunning = true; this.score = 0; this.gameSpeed = 3; this.obstacles = []; this.obstacleTimer = 0; this.obstacleInterval = 120;
+                this.currentPlayerSprite = 0; this.animationTime = 0; this.player.x = 50; this.player.y = this.canvas.height - 120;
+                this.player.dy = 0; this.player.grounded = true;
+                if (this.gameOverElement) this.gameOverElement.style.display = 'none';
+                this.gameLoop();
+            }
+            gameOver() {
+                this.isRunning = false;
+                if (this.finalScoreElement) this.finalScoreElement.textContent = this.score.toString();
+                if (this.gameOverElement) this.gameOverElement.style.display = 'block';
+            }
+        }
 
         window.addEventListener('load', () => {
             const canvas = document.getElementById('gameCanvas');
-            
-            // Adjust canvas size to fit container if needed (for responsiveness)
-            function resizeCanvas() {
-                const container = document.getElementById('gameContainer');
-                canvas.width = container.offsetWidth;
-                canvas.height = container.offsetHeight;
-                if(window.game) {
-                  window.game.render(); // Re-render after resize
-                }
-            }
-            // window.addEventListener('resize', resizeCanvas);
-            
-            // Initialize game
-            window.game = new window.DinoGameEngine(canvas);
+            window.game = new DinoGameEngine(canvas);
             window.game.setElements(
                 document.getElementById('score'),
                 document.getElementById('gameOver'),
                 document.getElementById('finalScore')
             );
-
-            // Auto-start after a brief delay
             setTimeout(() => window.game.start(), 300);
         });
     </script>
@@ -634,25 +595,20 @@ export const createDinoGame = (): void => {
 
   iframe.srcdoc = gameHTML;
 
-  // --- Event Handlers ---
   closeButton.onclick = () => {
     document.body.removeChild(overlay);
   };
 
-  // Close the overlay by clicking on the background
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) {
       document.body.removeChild(overlay);
     }
   });
 
-
-  // --- Assemble and Inject ---
   gameWrapper.appendChild(iframe);
   gameWrapper.appendChild(closeButton);
   overlay.appendChild(gameWrapper);
   document.body.appendChild(overlay);
 };
 
-// Helper function for easy integration
 export const initDinoGame = createDinoGame;
