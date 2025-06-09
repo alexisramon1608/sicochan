@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dino Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f7f7f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        #gameContainer {
+            border: 2px solid #333;
+            background: white;
+            position: relative;
+        }
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(to bottom, #87CEEB, #98FB98);
+        }
+        #score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            z-index: 10;
+        }
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            z-index: 20;
+        }
+        button {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="200"></canvas>
+        <div id="score">Score: 0</div>
+        <div id="gameOver">
+            <h2>Game Over!</h2>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <button onclick="startGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // TypeScript-style game implementation
+        class DinoGame {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.scoreElement = document.getElementById('score');
+                this.gameOverElement = document.getElementById('gameOver');
+                this.finalScoreElement = document.getElementById('finalScore');
+                
+                // Game state
+                this.isRunning = false;
+                this.score = 0;
+                this.gameSpeed = 3;
+                this.gravity = 0.6;
+                
+                // Player
+                this.player = {
+                    x: 50,
+                    y: this.canvas.height - 120,
+                    width: 80,
+                    height: 80,
+                    dy: 0,
+                    jumpPower: 20,
+                    grounded: true,
+                    color: '#FF6B6B'
+                };
+                
+                // Obstacles
+                this.obstacles = [];
+                this.obstacleTimer = 0;
+                this.obstacleInterval = 120;
+                
+                // Background
+                this.bgX = 0;
+                
+                // Player sprites for costume switching
+                this.playerSprites = [];
+                this.currentPlayerSprite = 0;
+                this.playerSpritesLoaded = 0;
+                
+                // Special sprite for score >= 1000
+                this.specialSprite = null;
+                this.specialSpriteLoaded = false;
+                
+                // Animation
+                this.animationTime = 0;
+                
+                // Other sprites (using colored rectangles as fallback)
+                this.sprites = {
+                    obstacle: null,
+                    background: null
+                };
+                
+                this.loadSprites();
+                this.setupControls();
+            }
+            
+            loadSprites() {
+                // Player sprites - load all 3 costumes
+                const playerSpriteUrls = [
+                    'https://i.imgur.com/ma5qyfz.png',
+                    'https://i.imgur.com/YrhlSea.png', 
+                    'https://i.imgur.com/6Qh5zgf.png'
+                ];
+                
+                playerSpriteUrls.forEach((url, index) => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.src = url;
+                    img.onload = () => {
+                        this.playerSprites[index] = img;
+                        this.playerSpritesLoaded++;
+                    };
+                    img.onerror = () => {
+                        console.log(`Failed to load player sprite ${index + 1}`);
+                        this.playerSpritesLoaded++;
+                    };
+                });
+                
+                // Special sprite for score >= 1000
+                const specialImg = new Image();
+                specialImg.crossOrigin = 'anonymous';
+                specialImg.src = 'https://i.imgur.com/JZa569N.png';
+                specialImg.onload = () => {
+                    this.specialSprite = specialImg;
+                    this.specialSpriteLoaded = true;
+                };
+                specialImg.onerror = () => {
+                    console.log('Failed to load special sprite');
+                    this.specialSpriteLoaded = true;
+                };
+                
+                // Obstacle sprite  
+                const obstacleImg = new Image();
+                obstacleImg.crossOrigin = 'anonymous';
+                obstacleImg.src = 'https://i.imgur.com/Hf8RmIT.png';
+                obstacleImg.onload = () => this.sprites.obstacle = obstacleImg;
+                
+                // Background pattern
+                const bgImg = new Image();
+                bgImg.crossOrigin = 'anonymous';
+                bgImg.src = 'https://via.placeholder.com/100x50/87CEEB/FFFFFF?text=SKY';
+                bgImg.onload = () => this.sprites.background = bgImg;
+            }
+            
+            setupControls() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space' || e.code === 'ArrowUp') {
+                        e.preventDefault();
+                        this.jump();
+                    }
+                });
+                
+                this.canvas.addEventListener('click', () => this.jump());
+                this.canvas.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.jump();
+                });
+            }
+            
+            jump() {
+                if (!this.isRunning) return;
+                
+                if (this.player.grounded) {
+                    this.player.dy = -this.player.jumpPower;
+                    this.player.grounded = false;
+                    
+                    // Switch to next costume on jump
+                    this.currentPlayerSprite = (this.currentPlayerSprite + 1) % 3;
+                }
+            }
+            
+            update() {
+                if (!this.isRunning) return;
+                
+                // Update animation time for rainbow background
+                this.animationTime += 0.02;
+                
+                // Update score and speed (faster acceleration)
+                this.score += 1;
+                this.gameSpeed = 3 + Math.floor(this.score / 200) * 0.8;
+                
+                // Update player physics
+                this.player.dy += this.gravity;
+                this.player.y += this.player.dy;
+                
+                // Ground collision
+                const groundY = this.canvas.height - 100;
+                if (this.player.y >= groundY) {
+                    this.player.y = groundY;
+                    this.player.dy = 0;
+                    this.player.grounded = true;
+                }
+                
+                // Spawn obstacles (irregular distribution)
+                this.obstacleTimer++;
+                if (this.obstacleTimer >= this.obstacleInterval) {
+                    this.obstacles.push({
+                        x: this.canvas.width,
+                        y: groundY - 45,
+                        width: 75,
+                        height: 125
+                    });
+                    this.obstacleTimer = 0;
+                    
+                    // Irregular interval: random variation + decreasing base interval
+                    const baseInterval = Math.max(40, 120 - Math.floor(this.score / 300) * 8);
+                    const randomVariation = Math.random() * 80 - 40; // -40 to +40 frames
+                    this.obstacleInterval = Math.max(25, baseInterval + randomVariation);
+                }
+                
+                // Update obstacles
+                for (let i = this.obstacles.length - 1; i >= 0; i--) {
+                    this.obstacles[i].x -= this.gameSpeed;
+                    
+                    // Remove off-screen obstacles
+                    if (this.obstacles[i].x + this.obstacles[i].width < 0) {
+                        this.obstacles.splice(i, 1);
+                    }
+                }
+                
+                // Check collisions
+                this.checkCollisions();
+                
+                // Update background
+                this.bgX -= this.gameSpeed * 0.5;
+                if (this.bgX <= -100) this.bgX = 0;
+            }
+            
+            checkCollisions() {
+                for (let obstacle of this.obstacles) {
+                    if (this.player.x < obstacle.x + obstacle.width &&
+                        this.player.x + this.player.width > obstacle.x &&
+                        this.player.y < obstacle.y + obstacle.height &&
+                        this.player.y + this.player.height > obstacle.y) {
+                        this.gameOver();
+                        return;
+                    }
+                }
+            }
+            
+            render() {
+                // Clear canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw animated rainbow background
+                if (this.score >= 1000) {
+                    // Rainbow gradient animation
+                    const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
+                    
+                    // Create rainbow colors that shift over time
+                    for (let i = 0; i <= 1; i += 0.2) {
+                        const hue = (this.animationTime * 50 + i * 360) % 360;
+                        gradient.addColorStop(i, `hsl(${hue}, 70%, 60%)`);
+                    }
+                    
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                } else {
+                    // Regular background
+                    if (this.sprites.background) {
+                        for (let x = this.bgX; x < this.canvas.width + 100; x += 100) {
+                            this.ctx.drawImage(this.sprites.background, x, 0, 100, 50);
+                        }
+                    } else {
+                        // Fallback gradient background
+                        const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+                        gradient.addColorStop(0, '#87CEEB');
+                        gradient.addColorStop(1, '#98FB98');
+                        this.ctx.fillStyle = gradient;
+                        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                    }
+                }
+                
+                // Draw ground
+                this.ctx.fillStyle = '#8B4513';
+                this.ctx.fillRect(0, this.canvas.height - 20, this.canvas.width, 20);
+                
+                // Draw player with proper scaling
+                let currentSprite = null;
+                let originalWidth = 350;
+                let originalHeight = 575;
+                
+                // Use special sprite when score >= 1000
+                if (this.score >= 1000 && this.specialSprite) {
+                    currentSprite = this.specialSprite;
+                    originalWidth = 500;
+                    originalHeight = 575;
+                } else if (this.playerSprites[this.currentPlayerSprite] && this.playerSpritesLoaded > 0) {
+                    currentSprite = this.playerSprites[this.currentPlayerSprite];
+                }
+                
+                if (currentSprite) {
+                    // Calculate scale to fit the player dimensions from original dimensions
+                    const scaleX = this.player.width / originalWidth;
+                    const scaleY = this.player.height / originalHeight;
+                    const scale = Math.min(scaleX, scaleY); // Maintain aspect ratio
+                    
+                    const scaledWidth = originalWidth * scale;
+                    const scaledHeight = originalHeight * scale;
+                    
+                    // Center the scaled sprite in the player bounds
+                    const offsetX = (this.player.width - scaledWidth) / 2;
+                    const offsetY = (this.player.height - scaledHeight) / 2;
+                    
+                    this.ctx.drawImage(
+                        currentSprite, 
+                        this.player.x + offsetX, 
+                        this.player.y + offsetY, 
+                        scaledWidth, 
+                        scaledHeight
+                    );
+                } else {
+                    // Fallback colored rectangle
+                    this.ctx.fillStyle = this.player.color;
+                    this.ctx.fillRect(this.player.x, this.player.y, this.player.width, this.player.height);
+                }
+                
+                // Draw obstacles
+                for (let obstacle of this.obstacles) {
+                    if (this.sprites.obstacle) {
+                        // Calculate scale to fit obstacle dimensions (75x125) from original (250x380)
+                        const scaleX = obstacle.width / 250;
+                        const scaleY = obstacle.height / 380;
+                        const scale = Math.min(scaleX, scaleY); // Maintain aspect ratio
+                        
+                        const scaledWidth = 250 * scale;
+                        const scaledHeight = 380 * scale;
+                        
+                        // Center the scaled sprite in the obstacle bounds
+                        const offsetX = (obstacle.width - scaledWidth) / 2;
+                        const offsetY = (obstacle.height - scaledHeight) / 2;
+                        
+                        this.ctx.drawImage(
+                            this.sprites.obstacle,
+                            obstacle.x + offsetX,
+                            obstacle.y + offsetY,
+                            scaledWidth,
+                            scaledHeight
+                        );
+                    } else {
+                        // Fallback colored rectangle
+                        this.ctx.fillStyle = '#8B4513';
+                        this.ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                    }
+                }
+                
+                // Update score display
+                this.scoreElement.textContent = `Score: ${this.score}`;
+            }
+            
+            gameLoop() {
+                this.update();
+                this.render();
+                
+                if (this.isRunning) {
+                    requestAnimationFrame(() => this.gameLoop());
+                }
+            }
+            
+            start() {
+                this.isRunning = true;
+                this.score = 0;
+                this.gameSpeed = 3;
+                this.obstacles = [];
+                this.obstacleTimer = 0;
+                this.obstacleInterval = 120;
+                this.currentPlayerSprite = 0; // Reset to first costume
+                this.animationTime = 0; // Reset animation time
+                
+                // Reset player
+                this.player.x = 50;
+                this.player.y = this.canvas.height - 120;
+                this.player.dy = 0;
+                this.player.grounded = true;
+                
+                this.gameOverElement.style.display = 'none';
+                this.gameLoop();
+            }
+            
+            gameOver() {
+                this.isRunning = false;
+                this.finalScoreElement.textContent = this.score;
+                this.gameOverElement.style.display = 'block';
+            }
+        }
+        
+        // Global game instance
+        let game = new DinoGame();
+        
+        // Global start function for iframe integration
+        function startGame() {
+            game.start();
+        }
+        
+        // Auto-start the game
+        window.addEventListener('load', () => {
+            setTimeout(() => startGame(), 500);
+        });
+        
+        // Expose start function globally for external access
+        window.startDinoGame = startGame;
+    </script>
+</body>
+</html>

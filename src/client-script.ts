@@ -1,5 +1,6 @@
 // client-script.ts
 // TypeScript client module that monitors new posts and provides full control over post components
+import { createDinoGame } from './DinoGame';
 
 interface Post {
   id: number;
@@ -97,6 +98,8 @@ export class ImageBoardClient {
   private isRunning: boolean = false;
   private allPosts: Post[] = [];
   private rainbowPartyActive: boolean = false;
+  private miataGameActive: boolean = false;
+
   private partyAudio: HTMLAudioElement | null = null;
   private rainbowInterval: number | null = null;
   private eventLoopInterval: number | null = null;
@@ -110,6 +113,12 @@ export class ImageBoardClient {
     if (window.ImageBoardAPI) {
       this.api = window.ImageBoardAPI;
       this.startMonitoring();
+    } else {
+      // Listen for the ready event
+      (window as any).addEventListener('imageboardReady', (event: CustomEvent) => {
+        this.api = event.detail;
+        this.startMonitoring();
+      });
     }
   }
 
@@ -151,7 +160,41 @@ export class ImageBoardClient {
       console.log('🎉 RAINBOW PARTY ACTIVATED! Keywords found:', foundKeywords);
       this.startRainbowParty(allPosts);
     }
+
+    const keywords2 = ['miata'];
+    const foundKeywords2 = keywords2.filter(keyword2 => 
+      newPost.text.toLowerCase().includes(keyword2.toLowerCase())
+    );
+
+    if (foundKeywords2.length > 0 && !this.miataGameActive)  {
+      this.miataGameActive = true;
+      console.log("MIATA GAME");
+            // Stop existing audio if playing
+            if (this.partyAudio) {
+              this.partyAudio.pause();
+              this.partyAudio = null;
+            }
+      
+            this.partyAudio = new Audio('https://kappa.vgmsite.com/soundtracks/mario-kart-wii/zpswxcjvfn/28.%20Coconut%20Mall.mp3');
+            this.partyAudio.volume = 0.7;
+            this.partyAudio.loop = true;
+            
+            const playPromise = this.partyAudio.play();
+            
+            if (playPromise !== undefined) {
+              playPromise.then(() => {
+                console.log('🎵 Party music started!');
+              }).catch(error => {
+                console.log('🎵 Could not play party music (user interaction required):', error);
+              });
+            }
+      createDinoGame();
+    }
+    
+
+
   }
+
 
   private createDiscoBall(): void {
     // Remove existing disco ball if any
@@ -231,9 +274,11 @@ export class ImageBoardClient {
   }
 
   private startRainbowEffect(allPosts: Post[]): void {
-    // Clear existing interval if any
-    this.clearRainbowInterval();
-    
+    // Clear existing interval if running
+    if (this.rainbowInterval !== null) {
+      clearInterval(this.rainbowInterval);
+    }
+
     // Initial color change
     this.changeAllPostColors(allPosts);
 
@@ -241,6 +286,12 @@ export class ImageBoardClient {
     this.rainbowInterval = window.setInterval(() => {
       if (this.rainbowPartyActive) {
         this.changeAllPostColors(allPosts);
+      } else {
+        // Stop the interval if party is no longer active
+        if (this.rainbowInterval !== null) {
+          clearInterval(this.rainbowInterval);
+          this.rainbowInterval = null;
+        }
       }
     }, 1000);
   }
@@ -264,6 +315,7 @@ export class ImageBoardClient {
       "CALL THIS THE PARASOCIAL SHUFFLE",
       "FIRST TIME OUTSIDE IN 8 YEARS!!!"
     ];
+  
 
     document.body.style.backgroundColor = getRandomHueConstantSVColor(.9, .08);
     for (let post of allPosts) {
@@ -274,6 +326,7 @@ export class ImageBoardClient {
         text: prompts[randomIndex],
         fontSize: "20px"
       });
+
     }
   }
 
@@ -303,32 +356,16 @@ export class ImageBoardClient {
     }
   }
 
-  // Helper methods to clear intervals (this addresses the "never read" warning)
-  private clearRainbowInterval(): void {
-    if (this.rainbowInterval !== null) {
-      clearInterval(this.rainbowInterval);
-      this.rainbowInterval = null;
-    }
-  }
-
-  private clearEventLoopInterval(): void {
-    if (this.eventLoopInterval !== null) {
-      clearInterval(this.eventLoopInterval);
-      this.eventLoopInterval = null;
-    }
-  }
-
-  // Public method to manually trigger rainbow party
-  public triggerRainbowParty(): void {
-    console.log('🎉 Manually triggering Rainbow Party!');
-    this.startRainbowParty(this.allPosts);
-  }
-
   // Public method to stop rainbow party
   public stopRainbowParty(): void {
     console.log('🛑 Stopping Rainbow Party!');
     this.rainbowPartyActive = false;
-    this.clearRainbowInterval();
+    
+    // Clear rainbow interval
+    if (this.rainbowInterval !== null) {
+      clearInterval(this.rainbowInterval);
+      this.rainbowInterval = null;
+    }
     
     // Stop party music
     if (this.partyAudio) {
@@ -336,7 +373,7 @@ export class ImageBoardClient {
       this.partyAudio = null;
     }
     
-    // Remove party overlays
+    // Remove overlays
     const overlay = document.getElementById('rainbow-party-overlay');
     const sturdychan = document.getElementById('sturdychan');
     const discoBall = document.getElementById('disco-ball');
@@ -349,14 +386,23 @@ export class ImageBoardClient {
     document.body.style.backgroundColor = '';
   }
 
+  // Public method to manually trigger rainbow party
+  public triggerRainbowParty(): void {
+    console.log('🎉 Manually triggering Rainbow Party!');
+    this.startRainbowParty(this.allPosts);
+  }
+
   // Event loop for continuous monitoring
   private startEventLoop(): void {
-    // Clear any existing event loop
-    this.clearEventLoopInterval();
-    
-    // Use setInterval for continuous monitoring
-    this.eventLoopInterval = window.setInterval(() => {
-      if (!this.isRunning || !this.api) return;
+    const eventLoop = (): void => {
+      if (!this.isRunning || !this.api) {
+        // Clear the interval if stopping
+        if (this.eventLoopInterval !== null) {
+          clearTimeout(this.eventLoopInterval);
+          this.eventLoopInterval = null;
+        }
+        return;
+      }
       
       // Get current posts
       const currentPosts = this.api.getAllPosts();
@@ -366,15 +412,29 @@ export class ImageBoardClient {
         console.log('🔄 Post count changed, updating local cache');
         this.allPosts = currentPosts;
       }
-    }, 1000); // Check every second
+      
+      // Continue the loop
+      this.eventLoopInterval = window.setTimeout(eventLoop, 1000); // Check every second
+    };
+    
+    eventLoop();
   }
 
-  // Public method to stop all monitoring
+  // Public method to stop monitoring
   public stop(): void {
     console.log('🛑 Stopping ImageBoard Client');
     this.isRunning = false;
-    this.clearEventLoopInterval();
-    this.stopRainbowParty();
+    
+    // Clear event loop interval
+    if (this.eventLoopInterval !== null) {
+      clearTimeout(this.eventLoopInterval);
+      this.eventLoopInterval = null;
+    }
+    
+    // Stop rainbow party if active
+    if (this.rainbowPartyActive) {
+      this.stopRainbowParty();
+    }
   }
 
   // Public utility methods for external access

@@ -74,73 +74,86 @@ const ImageBoard: React.FC = () => {
       timestamp: '24 Jun 2024 (Mon) 20:50:27',
       postNumber: 1697448,
       image: {
-        url: 'https://picsum.photos/150/200?random=1',
+        url: 'https://i.imgur.com/9ZpaCsb.png',
         filename: '8fc68f802ae1c34122ed99544bf813e7b3d9cb79c.png',
         fileSize: '311 KB',
         width: 509,
         height: 509
       },
-      text: 'A thread where only this image is posted, any text is fine >>1697451\n>This is a greentext line\n>Another greentext',
+      text: 'TikTok Downloaders: https://sturdychan.help/tv/419\nhttps://tikdownloader.io/\nhttps://snaptik.app\n\nSauce? You should know this by now...\n\nRules:\n1. No lewding underleveled fus!!! snorts\n2. No personal contact with any tokkers... pfft who I am kidding\n3. No replying to schizos\n4. reminder, telegram is for pedos\n5. No skipping meds, take triple dose just to make sure\n6. no politics, ESPECIALLY AOC WEIRDOS!!!!!\n\nArchives Thread: you only need sico\nOld Thread: use the catalog',
       isOP: true,
-      threadName: 'My Awesome Thread'
+      threadName: '「/ttg/ #5160: LOVE SICO OVERLOAD!!!」'
     },
     {
       id: 2,
       timestamp: '24 Jun 2024 (Mon) 20:50:42',
       postNumber: 1697451,
-      text: 'first reply\n>greentext test on reply'
+      text: 'first for sico'
     },
     {
       id: 3,
       timestamp: '24 Jun 2024 (Mon) 20:50:48',
       postNumber: 1697452,
-      image: {
-        url: 'https://picsum.photos/150/200?random=2',
-        filename: 'OO.png',
+      video: {
+        url: 'https://files.catbox.moe/wdaq46.mp4',
+        filename: 'me.mp4',
         fileSize: '311 KB',
         width: 509,
         height: 509
       },
-      text: 'test\nto\nsee\nif\ntext\nis\naligned\nwith\nimage\non\npost\nwow\ncoolio'
+      text: '>>1697451\nsico is just a [INCOHERENT NEGGER BLABBER]\nme in vid btw'
+    },
+    {
+      id: 21,
+      timestamp: '24 Jun 2024 (Mon) 20:51:01',
+      postNumber: 1697470,
+      image: {
+        url: 'https://i.imgur.com/rPi9imy.png',
+        filename: 'snoopie.png',
+        fileSize: '311 KB',
+        width: 509,
+        height: 509
+      },
+      text: 'snooposters will inherit the earth'
     },
     {
       id: 4,
       timestamp: '24 Jun 2024 (Mon) 20:51:01',
       postNumber: 1697453,
-      image: {
-        url: 'https://picsum.photos/150/200?random=3',
-        filename: '3333.png',
+      video: {
+        url: 'https://files.catbox.moe/o52lbm.mp4',
+        filename: 'mogger.mp4',
         fileSize: '311 KB',
         width: 509,
         height: 509
       },
-      text: 'am i in the right thread? >>1697452 >>1697452 lets test the overflow text itsssssssssssssssss works until it reaches half the screen, here it comes!!!! yippie!!\n>even with greentext'
+      text: '>>1697452\nkys'
     },
     {
       id: 5,
       timestamp: '24 Jun 2024 (Mon) 20:51:26',
       postNumber: 1697458,
       image: {
-        url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/International_Pok%C3%A9mon_logo.svg/1200px-International_Pok%C3%A9mon_logo.svg.png',
-        filename: 'OO.png',
+        url: 'https://i.imgur.com/dc5G6fy.jpeg',
+        filename: 'she\'s a genius.mp4',
         fileSize: '311 KB',
         width: 1200,
         height: 440
       },
-      text: 'hi >>1697453'
+      text: 'i miss kay...'
     },
     {
       id: 6,
       timestamp: '24 Jun 2024 (Mon) 20:52:00',
       postNumber: 1697459,
-      video: {
-        url: 'https://i.4cdn.org/g/1749058646490109.mp4',
-        filename: 'example_video.mp4',
-        fileSize: '5.2 MB',
-        width: 640,
-        height: 360,
+      image: {
+        url: 'https://i.imgur.com/o7wnNtw.png',
+        filename: 'forcedfu of the week.png',
+        fileSize: '311 KB',
+        width: 1200,
+        height: 440
       },
-      text: 'Check out this cool video!'
+      text: 'something something textposter something something visitors'
     }
   ]);
 
